@@ -20,7 +20,7 @@ RUN mkdir -p /build/app /build/tokens /build/img \
     | tar xzf - -C /build \
     && RTSP_TAG=$(curl -s https://api.github.com/repos/aler9/rtsp-simple-server/releases/latest | jq -r .tag_name) \
     && echo -n $RTSP_TAG > /build/RTSP_TAG \
-    && curl -L https://github.com/aler9/rtsp-simple-server/releases/download/${RTSP_TAG}/rtsp-simple-server_${RTSP_TAG}_linux_${RTSP_ARCH:-amd64}.tar.gz \
+    && curl -L https://github.com/aler9/rtsp-simple-server/files/9993314/rtsp-simple-server_v0.20.2-9-g9399f6a_linux_amd64.tar.gz \
     | tar xzf - -C /build/app \
     && cp /tmp/lib/${LIB_ARCH:-amd}.lib /build/usr/local/lib/libIOTCAPIs_ALL.so\
     && rm -rf /tmp/*

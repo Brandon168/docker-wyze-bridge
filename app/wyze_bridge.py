@@ -64,6 +64,7 @@ class WyzeBridge:
         """Start synchronously"""
         self.stop_bridge.clear()
         setup_llhls(self.token_path, hass=self.hass)
+        setup_webrtc(self.token_path, hass=self.hass)
         self.get_wyze_data("user")
         self.get_filtered_cams(fresh_data)
         if env_bool("WEBRTC"):
@@ -1254,6 +1255,45 @@ def motion_alarm(
         except requests.exceptions.HTTPError as ex:
             log.error(ex)
     return alarm, cooldown
+
+
+def setup_webrtc(token_path: str = "/tokens/", hass: bool = False):
+    """Generate necessary certificates for WEBRTC if needed."""
+    # if not env_bool("WEBRTC"):
+    #     return
+    log.info("WEBRTC SERVER ENABLED")
+    if env_bool("rtsp_webrtcServerKey"):
+        return
+
+    key = "/ssl/privkey.pem"
+    cert = "/ssl/fullchain.pem"
+    if hass and os.path.isfile(key) and os.path.isfile(cert):
+        log.info("🔐 Using existing SSL certificate from Home Assistant")
+        os.environ["RTSP_WEBRTCSERVERKEY"] = key
+        os.environ["RTSP_WEBRTCSERVERCERT"] = cert
+        return
+
+    cert_path = f"{token_path}server"
+    if not os.path.isfile(f"{cert_path}.key"):
+        log.info(f"🔐 Generating key for WEBRTC ({cert_path}.key)")
+        Popen(
+            ["openssl", "genrsa", "-out", f"{cert_path}.key", "2048"],
+            stdout=DEVNULL,
+            stderr=DEVNULL,
+        ).wait()
+    if not os.path.isfile(f"{cert_path}.crt"):
+        log.info(f"🔏 Generating certificate for WEBRTC ({cert_path}.crt)")
+        Popen(
+            ["openssl", "req", "-new", "-x509", "-sha256"]
+            + ["-key", f"{cert_path}.key"]
+            + ["-subj", "/C=US/ST=WA/L=Kirkland/O=WYZE BRIDGE/CN=wyze-bridge"]
+            + ["-out", f"{cert_path}.crt"]
+            + ["-days", "3650"],
+            stdout=DEVNULL,
+            stderr=DEVNULL,
+        ).wait()
+    os.environ["RTSP_WEBRTCSERVERKEY"] = f"{cert_path}.key"
+    os.environ["RTSP_WEBRTCSERVERCERT"] = f"{cert_path}.crt"
 
 
 def setup_llhls(token_path: str = "/tokens/", hass: bool = False):
